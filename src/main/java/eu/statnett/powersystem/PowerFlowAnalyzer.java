@@ -60,39 +60,30 @@ public class PowerFlowAnalyzer {
 
             // Parse the JSON response using the PowerSystemData class
             PowerSystemData powerSystemData = objectMapper.readValue(response.body(), PowerSystemData.class);
-            double averageOnshoreWindPower=0;
+            double sumOfLastFiveOnshoreWindPower=0;
             // Process each record in the response
             for (PowerRecord record : powerSystemData.getRecords()) {
 
-                // Store the OnshoreWindPower value in the deque
+                // Store the OnshoreWindPower, value in the deque
                 powerRecords.addLast(record);
 
                 // Keep the deque size within the specified window size
                 if (powerRecords.size() > DATA_WINDOW_SIZE) {
                     PowerRecord removedRecord = powerRecords.removeFirst();
-                    averagePowerResult.add(new AveragePowerResult(averageOnshoreWindPower,removedRecord.getMinutes1UTC()));
+                    averagePowerResult.add(new AveragePowerResult(sumOfLastFiveOnshoreWindPower/DATA_WINDOW_SIZE,removedRecord.getMinutes1UTC()));
 
                     // Printing the average OnshoreWindPower value
                     System.out.println("Timestamp: " + removedRecord.getMinutes1UTC() +
-                            ", Average OnshoreWindPower for the Last 5 Minutes: " + averageOnshoreWindPower);
+                            ", Average OnshoreWindPower for the Last 5 Minutes: " + sumOfLastFiveOnshoreWindPower/DATA_WINDOW_SIZE);
+
+                    sumOfLastFiveOnshoreWindPower = sumOfLastFiveOnshoreWindPower-removedRecord.getOnshoreWindPower();
                 }
 
-                // Calculating average OnshoreWindPower value for the last 5 minutes
-                averageOnshoreWindPower = calculateAverageOnshoreWindPower();
+                sumOfLastFiveOnshoreWindPower+=powerRecords.peekLast().getOnshoreWindPower();
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    private double calculateAverageOnshoreWindPower() {
-        // Calculate the average OnshoreWindPower for the last 5 minutes based on the values in the deque
-        double sum = 0;
-        for (PowerRecord value : powerRecords) {
-            sum += value.getOnshoreWindPower();
-        }
-
-        return sum / powerRecords.size();
     }
 }
 
